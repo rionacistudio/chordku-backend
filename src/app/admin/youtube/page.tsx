@@ -53,14 +53,13 @@ export default function YoutubePage() {
       page: String(page),
       limit: "20",
       ...(search && { search }),
+      ...(filter === "with" && { has_youtube: "yes" }),
+      ...(filter === "without" && { has_youtube: "no" }),
     });
     const res = await fetch(`/api/songs?${params}`, { credentials: "include" });
     const data = await res.json();
     if (data.success) {
-      let filtered = data.data as Song[];
-      if (filter === "with") filtered = filtered.filter((s) => s.youtube_url);
-      if (filter === "without") filtered = filtered.filter((s) => !s.youtube_url);
-      setSongs(filtered);
+      setSongs(data.data as Song[]);
       setPagination(data.pagination);
     }
     setLoading(false);
