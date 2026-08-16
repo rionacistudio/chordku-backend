@@ -323,7 +323,7 @@ export default function SongForm({ initialData, isEdit, originalJudul, originalP
                   className="w-full h-96 font-mono text-sm p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none bg-slate-50"
                 />
                 {showPreview && (
-                  <div className="bg-slate-900 text-slate-100 rounded-xl p-4 h-96 overflow-auto font-mono text-sm whitespace-pre-wrap">
+                  <div className="bg-white border border-slate-200 text-slate-800 rounded-xl p-4 h-96 overflow-auto font-mono text-sm whitespace-pre-wrap">
                     {form.isi_chord || <span className="text-slate-500">Preview chord akan muncul di sini...</span>}
                   </div>
                 )}

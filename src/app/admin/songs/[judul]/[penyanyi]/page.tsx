@@ -144,7 +144,7 @@ export default function SongDetailPage() {
           {song.isi_chord && (
             <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
               <h3 className="font-semibold text-slate-700 mb-4">Isi Chord</h3>
-              <pre className="font-mono text-sm text-slate-800 whitespace-pre-wrap bg-slate-900 text-slate-100 p-4 rounded-xl overflow-auto max-h-[600px]">
+              <pre className="font-mono text-sm text-slate-800 whitespace-pre-wrap bg-white border border-slate-200 p-4 rounded-xl overflow-auto max-h-[600px]">
                 {song.isi_chord}
               </pre>
             </div>
