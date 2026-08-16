@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/db";
 import { tbChord } from "@/db/schema";
-import { eq, ilike, or, and, sql, count } from "drizzle-orm";
+import { eq, ilike, or, and, sql, count, asc, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/middleware";
 import {
   successResponse,
@@ -9,6 +9,16 @@ import {
   paginatedResponse,
 } from "@/lib/api-response";
 import { format } from "date-fns";
+
+const SORT_COLUMNS: Record<string, any> = {
+  judul: tbChord.judul,
+  penyanyi: tbChord.penyanyi,
+  base_key: tbChord.base_key,
+  album: tbChord.album,
+  language: tbChord.language,
+  youtube_url: tbChord.youtube_url,
+  lastmod: tbChord.lastmod,
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +29,10 @@ export async function GET(request: NextRequest) {
     const language = searchParams.get("language") || "";
     const songtype = searchParams.get("songtype") || "";
     const album = searchParams.get("album") || "";
+    const baseKey = searchParams.get("base_key") || "";
+    const hasYoutube = searchParams.get("has_youtube") || "";
+    const sortBy = searchParams.get("sort_by") || "lastmod";
+    const sortDir = searchParams.get("sort_dir") || "desc";
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -35,8 +49,14 @@ export async function GET(request: NextRequest) {
     if (language) conditions.push(eq(tbChord.language, language));
     if (songtype) conditions.push(eq(tbChord.songtype, songtype));
     if (album) conditions.push(ilike(tbChord.album, `%${album}%`));
+    if (baseKey) conditions.push(eq(tbChord.base_key, baseKey));
+    if (hasYoutube === "yes") conditions.push(sql`${tbChord.youtube_url} != ''`);
+    if (hasYoutube === "no") conditions.push(sql`${tbChord.youtube_url} = ''`);
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortCol = SORT_COLUMNS[sortBy] || tbChord.lastmod;
+    const orderFn = sortDir === "asc" ? asc : desc;
 
     const [totalResult, rows] = await Promise.all([
       db.select({ count: count() }).from(tbChord).where(where),
@@ -44,7 +64,7 @@ export async function GET(request: NextRequest) {
         .select()
         .from(tbChord)
         .where(where)
-        .orderBy(tbChord.lastmod)
+        .orderBy(orderFn(sortCol))
         .limit(limit)
         .offset(offset),
     ]);

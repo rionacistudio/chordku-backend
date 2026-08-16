@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Music,
   RefreshCw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 
 interface Song {
@@ -56,6 +58,12 @@ export default function SongsPage() {
   const [page, setPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<Song | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState("lastmod");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [baseKeyFilter, setBaseKeyFilter] = useState("");
+  const [ytFilter, setYtFilter] = useState("");
+
+  const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B", "Am", "Bm", "Cm", "Dm", "Em", "Fm", "Gm"];
 
   const fetchSongs = useCallback(async () => {
     setLoading(true);
@@ -65,6 +73,10 @@ export default function SongsPage() {
       ...(search && { search }),
       ...(language && { language }),
       ...(songtype && { songtype }),
+      ...(baseKeyFilter && { base_key: baseKeyFilter }),
+      ...(ytFilter && { has_youtube: ytFilter }),
+      sort_by: sortBy,
+      sort_dir: sortDir,
     });
     const res = await fetch(`/api/songs?${params}`, { credentials: "include" });
     const data = await res.json();
@@ -73,7 +85,7 @@ export default function SongsPage() {
       setPagination(data.pagination);
     }
     setLoading(false);
-  }, [page, search, language, songtype]);
+  }, [page, search, language, songtype, baseKeyFilter, ytFilter, sortBy, sortDir]);
 
   useEffect(() => {
     fetchSongs();
@@ -82,7 +94,35 @@ export default function SongsPage() {
   // Debounced search
   useEffect(() => {
     setPage(1);
-  }, [search, language, songtype]);
+  }, [search, language, songtype, baseKeyFilter, ytFilter, sortBy, sortDir]);
+
+  function toggleSort(col: string) {
+    if (sortBy === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(col);
+      setSortDir("asc");
+    }
+  }
+
+  function SortHeader({ col, children }: { col: string; children: React.ReactNode }) {
+    const active = sortBy === col;
+    return (
+      <th
+        className="text-left px-4 py-3 font-medium text-slate-500 cursor-pointer hover:text-purple-500 select-none transition"
+        onClick={() => toggleSort(col)}
+      >
+        <span className="inline-flex items-center gap-1">
+          {children}
+          {active ? (
+            sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronUp className="w-3 h-3 opacity-30" />
+          )}
+        </span>
+      </th>
+    );
+  }
 
   async function handleDelete(song: Song) {
     setDeleting(true);
@@ -162,6 +202,28 @@ export default function SongsPage() {
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <select
+                value={baseKeyFilter}
+                onChange={(e) => setBaseKeyFilter(e.target.value)}
+                className="pl-8 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+              >
+                <option value="">Semua Key</option>
+                {KEYS.map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+            </div>
+            <select
+              value={ytFilter}
+              onChange={(e) => setYtFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+            >
+              <option value="">Semua YT</option>
+              <option value="yes">Ada YouTube</option>
+              <option value="no">Tanpa YouTube</option>
+            </select>
           </div>
         </div>
       </div>
@@ -185,13 +247,13 @@ export default function SongsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-4 py-3 font-medium text-slate-500">Judul</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500">Penyanyi</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500 hidden md:table-cell">Key</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500 hidden lg:table-cell">Album</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500 hidden lg:table-cell">Bahasa</th>
-                  <th className="text-center px-4 py-3 font-medium text-slate-500">YT</th>
-                  <th className="text-left px-4 py-3 font-medium text-slate-500 hidden xl:table-cell">Lastmod</th>
+                  <SortHeader col="judul">Judul</SortHeader>
+                  <SortHeader col="penyanyi">Penyanyi</SortHeader>
+                  <SortHeader col="base_key"><span className="hidden md:inline">Key</span></SortHeader>
+                  <SortHeader col="album"><span className="hidden lg:inline">Album</span></SortHeader>
+                  <SortHeader col="language"><span className="hidden lg:inline">Bahasa</span></SortHeader>
+                  <SortHeader col="youtube_url">YT</SortHeader>
+                  <SortHeader col="lastmod">Lastmod</SortHeader>
                   <th className="text-center px-4 py-3 font-medium text-slate-500">Aksi</th>
                 </tr>
               </thead>
@@ -202,17 +264,17 @@ export default function SongsPage() {
                       <p className="font-medium text-slate-800 truncate max-w-[180px]">{song.judul}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-600 truncate max-w-[120px]">{song.penyanyi}</td>
-                    <td className="px-4 py-3 hidden md:table-cell">
+                    <td className="px-4 py-3">
                       {song.base_key && (
                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-mono">
                           {song.base_key}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-slate-500 text-xs truncate max-w-[120px]">
+                    <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[120px]">
                       {song.album || "-"}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
+                    <td className="px-4 py-3">
                       {song.language && (
                         <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">
                           {song.language}
@@ -226,7 +288,7 @@ export default function SongsPage() {
                         <span className="text-slate-300 text-xs">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden xl:table-cell text-xs text-slate-400">
+                    <td className="px-4 py-3 text-xs text-slate-400">
                       {song.lastmod?.slice(0, 10)}
                     </td>
                     <td className="px-4 py-3">
