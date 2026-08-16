@@ -165,8 +165,7 @@ export default function SongForm({ initialData, isEdit, originalJudul, originalP
                     value={form.judul}
                     onChange={(e) => handleChange("judul", e.target.value)}
                     placeholder="Masukkan judul lagu"
-                    disabled={isEdit}
-                    className="input disabled:bg-slate-50 disabled:text-slate-400"
+                    className="input"
                     required
                   />
                 </Field>
@@ -176,8 +175,7 @@ export default function SongForm({ initialData, isEdit, originalJudul, originalP
                     value={form.penyanyi}
                     onChange={(e) => handleChange("penyanyi", e.target.value)}
                     placeholder="Nama penyanyi"
-                    disabled={isEdit}
-                    className="input disabled:bg-slate-50 disabled:text-slate-400"
+                    className="input"
                     required
                   />
                 </Field>

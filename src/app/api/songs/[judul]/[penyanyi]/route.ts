@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const { judul, penyanyi } = await params;
     const body = await request.json();
 
-    const existing = await db
+    const old = await db
       .select()
       .from(tbChord)
       .where(
@@ -53,22 +53,51 @@ export async function PUT(request: NextRequest, { params }: Params) {
       )
       .limit(1);
 
-    if (existing.length === 0) return errorResponse("Lagu tidak ditemukan", 404);
+    if (old.length === 0) return errorResponse("Lagu tidak ditemukan", 404);
 
-    const updateData: Partial<typeof tbChord.$inferInsert> = {
-      lastmod: format(new Date(), "yyyy-MM-dd HH:mm:ss"),
-    };
+    const newJudul = (body.judul || decodeParam(judul)).trim();
+    const newPenyanyi = (body.penyanyi || decodeParam(penyanyi)).trim();
+    const isRenamed = newJudul !== decodeParam(judul) || newPenyanyi !== decodeParam(penyanyi);
+
+    if (isRenamed) {
+      const dupCheck = await db
+        .select({ judul: tbChord.judul })
+        .from(tbChord)
+        .where(and(eq(tbChord.judul, newJudul), eq(tbChord.penyanyi, newPenyanyi)))
+        .limit(1);
+      if (dupCheck.length > 0) {
+        return errorResponse(`Lagu "${newJudul}" oleh "${newPenyanyi}" sudah ada`, 409);
+      }
+    }
+
+    const lastmod = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+
+    if (isRenamed) {
+      await db.delete(tbChord).where(
+        and(eq(tbChord.judul, decodeParam(judul)), eq(tbChord.penyanyi, decodeParam(penyanyi)))
+      );
+      const [created] = await db.insert(tbChord).values({
+        judul: newJudul,
+        penyanyi: newPenyanyi,
+        base_key: body.base_key ?? old[0].base_key,
+        album: body.album ?? old[0].album,
+        album_image: body.album_image ?? old[0].album_image,
+        lastmod,
+        isi_chord: body.isi_chord ?? old[0].isi_chord,
+        language: body.language ?? old[0].language,
+        youtube_url: body.youtube_url ?? old[0].youtube_url,
+        songwriter: body.songwriter ?? old[0].songwriter,
+        year: body.year ?? old[0].year,
+        songtype: body.songtype ?? old[0].songtype,
+      }).returning();
+      return successResponse(created, "Lagu berhasil diperbarui");
+    }
+
+    const updateData: Partial<typeof tbChord.$inferInsert> = { lastmod };
 
     const fields = [
-      "base_key",
-      "album",
-      "album_image",
-      "isi_chord",
-      "language",
-      "youtube_url",
-      "songwriter",
-      "year",
-      "songtype",
+      "base_key", "album", "album_image", "isi_chord",
+      "language", "youtube_url", "songwriter", "year", "songtype",
     ] as const;
 
     for (const field of fields) {
